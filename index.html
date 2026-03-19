@@ -236,9 +236,48 @@ body{font-family:-apple-system,sans-serif;background:#fff9f5;min-height:100vh;pa
 .admin-entry button{background:#2d2016;color:#fff;border:none;padding:10px 16px;border-radius:20px;font-size:12px;cursor:pointer}
 .user-only .admin-entry,.user-only .voice-btn{display:none!important}
 .user-only #ap{display:none!important}
+
+/* 新订单提示横幅 */
+.new-order-banner{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  background:linear-gradient(135deg,#ff6b4a,#ffa726);
+  color:#fff;padding:16px 20px;
+  display:none;
+  animation:slideDown 0.3s ease;
+  max-width:480px;margin:0 auto;
+}
+.new-order-banner.show{display:block}
+@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.new-order-banner h3{font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.new-order-banner p{font-size:13px;opacity:0.9}
+.new-order-banner .btn-group{display:flex;gap:10px;margin-top:12px}
+.new-order-banner button{padding:10px 20px;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer}
+.new-order-banner .view-btn{background:#fff;color:#ff6b4a}
+.new-order-banner .close-btn{background:rgba(255,255,255,0.2);color:#fff}
+
+/* 连接状态指示器 */
+.connection-status{
+  position:fixed;bottom:140px;left:20px;z-index:50;
+  display:flex;align-items:center;gap:6px;
+  background:#fff;padding:8px 14px;border-radius:20px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.1);font-size:12px;
+}
+.connection-dot{width:8px;height:8px;border-radius:50%;background:#52c41a}
+.connection-dot.off{background:#ff4d4f}
 </style>
 </head>
 <body class="user-only">
+
+<!-- 新订单提示横幅（商家端） -->
+<div class="new-order-banner" id="newOrderBanner">
+<h3>🔔 新订单来了！</h3>
+<p id="newOrderInfo">订单号：0101-001</p>
+<div class="btn-group">
+<button class="view-btn" onclick="viewNewOrder()">查看订单</button>
+<button class="close-btn" onclick="closeBanner()">稍后处理</button>
+</div>
+</div>
+
 <div class="t" id="toast"></div>
 
 <div id="up">
@@ -324,6 +363,12 @@ body{font-family:-apple-system,sans-serif;background:#fff9f5;min-height:100vh;pa
 </div>
 
 <div class="admin-entry"><button onclick="sa()">👨‍🍳 管理</button></div>
+
+<!-- 连接状态指示器 -->
+<div class="connection-status" id="connectionStatus">
+<div class="connection-dot" id="connectionDot"></div>
+<span id="connectionText">实时同步中</span>
+</div>
 
 <div id="ap" style="display:none">
 <div class="tb">
@@ -438,9 +483,13 @@ body{font-family:-apple-system,sans-serif;background:#fff9f5;min-height:100vh;pa
 <button onclick="event.stopPropagation();openCheckout()">去结算 →</button></div>
 
 <script>
+// =====================================================
+// 全局配置
+// =====================================================
 var isAdmin=window.location.search.indexOf('admin=true')>-1;
 if(isAdmin)document.body.classList.remove('user-only');
 
+// 菜品数据
 var M=[
 {id:1,n:'香菇',e:'🍄',p:1,c:'素菜类',a:true},{id:2,n:'鞭炮笋',e:'🌿',p:1,c:'素菜类',a:true},
 {id:3,n:'面筋',e:'🧽',p:1,c:'素菜类',a:true},{id:4,n:'蘑菇',e:'🍄',p:1,c:'素菜类',a:true},
@@ -481,12 +530,131 @@ if(lastOrderDate!==todayDate){todayOrderCount=0;localStorage.setItem('todayOrder
 var savedMenu=localStorage.getItem('momomala_menu');
 if(savedMenu)M=JSON.parse(savedMenu);
 
-C[SPICE_ITEMS[SP].id]=1;
-rm('all');
-updateVoiceButton();
-updateCartBar();
+// =====================================================
+// 实时同步 - BroadcastChannel
+// =====================================================
+var channel=null;
+var lastOrderCount=O.length; // 跟踪订单数量
 
+function initBroadcastChannel(){
+  try{
+    channel=new BroadcastChannel('momomala_orders');
+    channel.onmessage=function(event){
+      var data=event.data;
+      if(data.type==='new_order'){
+        // 收到新订单通知
+        O=JSON.parse(localStorage.getItem('mo')||'[]');
+        if(isAdmin){
+          showNewOrderNotification(data.order);
+        }
+      }
+    };
+    console.log('✅ 实时同步已开启');
+    updateConnectionStatus(true);
+  }catch(e){
+    console.log('⚠️ BroadcastChannel不支持，使用轮询模式');
+    startPolling();
+  }
+}
+
+// 轮询模式（备用方案）
+function startPolling(){
+  setInterval(function(){
+    var newO=JSON.parse(localStorage.getItem('mo')||'[]');
+    if(newO.length>lastOrderCount && isAdmin){
+      // 有新订单
+      var newOrder=newO[0];
+      showNewOrderNotification(newOrder);
+    }
+    lastOrderCount=newO.length;
+    O=newO;
+    if(isAdmin){
+      rd();
+      ra();
+    }
+  },3000); // 每3秒检查一次
+}
+
+// 显示新订单通知
+function showNewOrderNotification(order){
+  // 更新横幅
+  document.getElementById('newOrderInfo').textContent=
+    '订单号: '+order.id+' | '+order.b+'号楼 '+order.r+' | ¥'+order.tu;
+  document.getElementById('newOrderBanner').classList.add('show');
+
+  // 播放语音
+  if(voiceEnabled){
+    playNewOrderVoice(order);
+  }
+
+  // 刷新订单列表
+  if(isAdmin){
+    rd();
+    ra();
+  }
+}
+
+// 播放语音提示（增强版）
+function playNewOrderVoice(order){
+  if('speechSynthesis' in window){
+    window.speechSynthesis.cancel(); // 停止之前的播报
+
+    // 第一遍：总体提示
+    var msg1=new SpeechSynthesisUtterance('您有新的订单');
+    msg1.lang='zh-CN';
+    msg1.rate=0.9;
+    msg1.pitch=1;
+
+    // 第二遍：订单详情
+    msg1.onend=function(){
+      setTimeout(function(){
+        var detail=new SpeechSynthesisUtterance(
+          order.b+'号楼'+order.r+'，'+order.n+'，共'+order.tu+'元'
+        );
+        detail.lang='zh-CN';
+        detail.rate=0.9;
+        window.speechSynthesis.speak(detail);
+      },500);
+    };
+
+    window.speechSynthesis.speak(msg1);
+  }
+}
+
+// 更新连接状态
+function updateConnectionStatus(connected){
+  var dot=document.getElementById('connectionDot');
+  var text=document.getElementById('connectionText');
+  if(connected){
+    dot.className='connection-dot';
+    text.textContent='实时同步中';
+  }else{
+    dot.className='connection-dot off';
+    text.textContent='已断开';
+  }
+}
+
+// 查看新订单
+function viewNewOrder(){
+  closeBanner();
+  // 跳转到订单页面
+  document.querySelectorAll('#ap .tb div').forEach(function(e){e.classList.remove('a')});
+  document.querySelectorAll('#ap .tb div')[1].classList.add('a');
+  document.getElementById('dv').style.display='none';
+  document.getElementById('menuManage').style.display='none';
+  document.getElementById('sv').style.display='none';
+  document.getElementById('ov2').style.display='block';
+  ra();
+}
+
+// 关闭横幅
+function closeBanner(){
+  document.getElementById('newOrderBanner').classList.remove('show');
+}
+
+// =====================================================
 // 搜索功能
+// =====================================================
 function handleSearch(){
   var input=document.getElementById('searchInput');
   var clearBtn=document.getElementById('searchClear');
@@ -548,6 +716,9 @@ function renderSearchResults(){
   }
 }
 
+// =====================================================
+// 订单号生成
+// =====================================================
 function generateOrderId(){
   var now=new Date();
   var month=String(now.getMonth()+1).padStart(2,'0');
@@ -558,6 +729,9 @@ function generateOrderId(){
   return month+day+'-'+String(todayOrderCount).padStart(3,'0');
 }
 
+// =====================================================
+// 辣度选择
+// =====================================================
 function selectSpice(el,s){
   document.querySelectorAll('.si').forEach(function(e){e.classList.remove('a')});
   el.classList.add('a');
@@ -711,23 +885,74 @@ function renderFinalSummary(){
   document.getElementById('finalSummary').innerHTML=html;
 }
 
+// =====================================================
+// 提交订单 - 关键！发送通知
+// =====================================================
 function submitOrder(){
   var b=document.getElementById('b').value.trim(),r=document.getElementById('r').value.trim(),nm=document.getElementById('nm').value.trim(),ph=document.getElementById('ph').value.trim(),nt=document.getElementById('nt').value.trim();
   var orderId=generateOrderId();
   var it=Object.entries(C).map(function(x){var m=M.find(function(y){return y.id==x[0]});if(!m)return null;return{n:m.n,p:m.p,q:x[1],e:m.e}}).filter(function(x){return x!==null});
   var su=it.reduce(function(a,i){return a+i.p*i.q},0),bf=BX*BP,tu=su+D+bf;
   var order={id:orderId,b:b,r:r,n:nm,p:ph,s:SP,nt:nt,pay:PS,it:it,su:su,bx:BX,bf:bf,df:D,tu:tu,st:'pending',tm:new Date().toLocaleString('zh-CN'),date:new Date().toDateString()};
-  O.unshift(order);localStorage.setItem('mo',JSON.stringify(O));
+
+  // 保存订单
+  O.unshift(order);
+  localStorage.setItem('mo',JSON.stringify(O));
+
+  // ★★★ 关键：通过BroadcastChannel通知商家端 ★★★
+  if(channel){
+    channel.postMessage({type:'new_order',order:order});
+  }
+
+  // 更新订单计数
+  lastOrderCount=O.length;
+
+  // 重置购物车
   C={};BX=0;C[SPICE_ITEMS[SP].id]=1;document.getElementById('bc').textContent='0';
   ['b','r','nm','ph','nt'].forEach(function(x){document.getElementById(x).value=''});
   hm1();hm2();hm3();document.getElementById('cb').style.display='none';rm('all');
-  tt('下单成功！订单号：'+orderId);if(voiceEnabled)playNewOrderSound();
+
+  tt('下单成功！订单号：'+orderId+'\n商家已收到通知');
+
+  // 即使没有BroadcastChannel也尝试播放本地提示
+  if(voiceEnabled){
+    try{
+      var msg=new SpeechSynthesisUtterance('下单成功');
+      msg.lang='zh-CN';
+      window.speechSynthesis.speak(msg);
+    }catch(e){}
+  }
 }
 
-function toggleVoice(){voiceEnabled=!voiceEnabled;localStorage.setItem('voiceEnabled',voiceEnabled);updateVoiceButton();if(voiceEnabled){tt('语音提示已开启');playNewOrderSound()}else{tt('语音提示已关闭')}}
-function updateVoiceButton(){var btn=document.getElementById('voiceToggle');btn.textContent=voiceEnabled?'🔊 语音开':'🔇 语音关';btn.className=voiceEnabled?'voice-btn on':'voice-btn'}
-function playNewOrderSound(){if('speechSynthesis' in window){var msg=new SpeechSynthesisUtterance('您有新的订单');msg.lang='zh-CN';window.speechSynthesis.speak(msg)}}
+// =====================================================
+// 语音控制
+// =====================================================
+function toggleVoice(){
+  voiceEnabled=!voiceEnabled;
+  localStorage.setItem('voiceEnabled',voiceEnabled);
+  updateVoiceButton();
+  if(voiceEnabled){
+    tt('语音提示已开启');
+    // 测试语音
+    if('speechSynthesis' in window){
+      var msg=new SpeechSynthesisUtterance('语音提示已开启');
+      msg.lang='zh-CN';
+      window.speechSynthesis.speak(msg);
+    }
+  }else{
+    tt('语音提示已关闭');
+  }
+}
 
+function updateVoiceButton(){
+  var btn=document.getElementById('voiceToggle');
+  btn.textContent=voiceEnabled?'🔊 语音开':'🔇 语音关';
+  btn.className=voiceEnabled?'voice-btn on':'voice-btn';
+}
+
+// =====================================================
+// 页面切换
+// =====================================================
 function ut(t,el){
   document.querySelectorAll('#up .tb div').forEach(function(e){e.classList.remove('a')});el.classList.add('a');
   document.getElementById('mv').style.display=t==='menu'?'block':'none';
@@ -795,8 +1020,19 @@ function renderAdminOrder(o){
   if(o.st==='c')html+='<button class="btn-complete" onclick="us2(\''+o.id+'\',\'d\')">完成</button>';html+='</div>';}html+='</div>';return html;
 }
 
-function us2(id,st){var o=O.find(function(x){return x.id===id});if(o){o.st=st;localStorage.setItem('mo',JSON.stringify(O));rd();ra();tt('订单 '+id+' 已更新')}}
+function us2(id,st){
+  var o=O.find(function(x){return x.id===id});
+  if(o){
+    o.st=st;
+    localStorage.setItem('mo',JSON.stringify(O));
+    // 通知其他标签页
+    if(channel){channel.postMessage({type:'order_update',order:o})}
+    rd();ra();
+    tt('订单 '+id+' 已更新');
+  }
+}
 
+// 菜品管理
 function renderMenuManage(){
   var container=document.getElementById('menuManageList'),categories=[...new Set(M.map(function(x){return x.c}))],html='';
   categories.forEach(function(cat){
@@ -835,6 +1071,48 @@ function exportAllOrders(){if(!O.length){tt('暂无订单');return}var csv='订�
 function rq(){var u=window.location.origin+window.location.pathname;document.getElementById('sl').value=u;var c=document.getElementById('qr');c.innerHTML='';new QRCode(c,{text:u,width:180,height:180})}
 function cp(){var i=document.getElementById('sl');i.select();document.execCommand('copy');tt('链接已复制 ✅')}
 function dq(){var v=document.querySelector('#qr canvas');if(v){var a=document.createElement('a');a.download='萌萌辣关东煮-二维码.png';a.href=v.toDataURL('image/png');a.click();tt('已下载 📥')}}
+
+// =====================================================
+// 初始化
+// =====================================================
+C[SPICE_ITEMS[SP].id]=1;
+rm('all');
+updateVoiceButton();
+updateCartBar();
+
+// 初始化实时同步
+initBroadcastChannel();
+
+// 监听localStorage变化（跨标签页备用方案）
+window.addEventListener('storage',function(e){
+  if(e.key==='mo'){
+    O=JSON.parse(e.newValue||'[]');
+    if(isAdmin){
+      // 检查是否有新订单
+      if(O.length>lastOrderCount){
+        var newOrder=O[0];
+        showNewOrderNotification(newOrder);
+      }
+      lastOrderCount=O.length;
+      rd();
+      ra();
+    }
+  }
+});
+
+// 页面可见性变化时刷新
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden && isAdmin){
+    O=JSON.parse(localStorage.getItem('mo')||'[]');
+    rd();
+    ra();
+  }
+});
+
+console.log('✅ 萌萌辣关东煮 - 系统已启动');
+console.log('📱 用户端访问：当前页面');
+console.log('👨‍🍳 管理端访问：当前页面?admin=true');
+console.log('💡 提示：请在两个浏览器标签页分别打开用户端和管理端');
 </script>
 </body>
 </html>
