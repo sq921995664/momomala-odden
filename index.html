@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>萌萌辣关东煮</
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, sans-serif; background: #fff9f5; min-height: 100vh; padding-bottom: 100px; }
+    .header { background: linear-gradient(135deg, #ff6b4a, #ffa726); padding: 30px 20px; color: #fff; text-align: center; }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .notice { background: #fff7e6; margin: 16px; padding: 16px; border-radius: 16px; border-left: 4px solid #ffa726; font-size: 13px; line-height: 1.8; }
+    .notice .hl { color: #ff6b4a; font-weight: bold; }
+    .spice { display: flex; gap: 8px; padding: 0 16px; margin-bottom: 16px; }
+    .spice-item { flex: 1; background: #fff; padding: 12px 8px; border-radius: 12px; text-align: center; border: 2px solid #f0e6dc; cursor: pointer; }
+    .spice-item.active { border-color: #ff6b4a; background: #fff0eb; }
+    .spice-item .icon { font-size: 24px; }
+    .spice-item .name { font-size: 11px; color: #6b5c4d; margin-top: 4px; }
+    .recommend { background: #fff; margin: 0 16px 16px; padding: 16px; border-radius: 16px; border: 2px dashed #ff6b4a; }
+    .recommend-title { font-size: 16px; font-weight: bold; color: #ff6b4a; margin-bottom: 12px; }
+    .recommend-item { display: flex; justify-content: space-between; align-items: center; background: #faf8f6; padding: 12px; border-radius: 12px; margin-bottom: 8px; }
+    .recommend-item:last-child { margin-bottom: 0; }
+    .推荐信息 { 显示: 弹性布局; 项目对齐: 居中; 间隔: 10像素; }
+    .推荐表情 { 字体大小: 28像素; }
+    .推荐名称 { 字体大小: 14px; 字体粗细: 600; }
+    .推荐描述 { 字体大小: 11px; 颜色: #a89888; }
+    .recommend-price { display: flex; gap: 6px; }
+    .price-tag { background: #fff0eb; color: #ff6b4a; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+    .category { display: flex; gap: 8px; padding: 0 16px; margin-bottom: 16px; overflow-x: auto; }
+    .category-item { background: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; white-space: nowrap; border: 2px solid #f0e6dc; cursor: pointer; }
+    .category-item.active { background: linear-gradient(135deg, #ff6b4a, #ffa726); color: #fff; border-color: transparent; }
+    .menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 16px; }
+    .menu-item { background: #fff; border-radius: 14px; padding: 14px 8px; text-align: center; }
+    .menu-emoji { font-size: 32px; margin-bottom: 6px; }
+    .menu-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .menu-price { font-size: 16px; font-weight: bold; color: #ff6b4a; margin-bottom: 10px; }
+    .menu-price::before { content: '¥'; font-size: 12px; }
+    .qty { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .qty-btn { width: 26px; height: 26px; border-radius: 50%; border: none; font-size: 16px; cursor: pointer; }
+    .qty-btn.minus { background: #f5f0eb; }
+    .qty-btn.plus { background: #ff6b4a; color: #fff; }
+    .qty-num { font-size: 14px; font-weight: bold; min-width: 20px; text-align: center; }
+    .cart { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); max-width: 480px; margin: 0 auto; }
+    .cart-info { display: flex; align-items: center; gap: 12px; }
+    .cart-icon { font-size: 32px; }
+    .cart-total { font-size: 22px; font-weight: bold; color: #ff6b4a; }
+    .cart-total::before { content: '¥'; font-size: 14px; }
+    .cart-count { font-size: 11px; color: #a89888; }
+    .cart-btn { padding: 12px 28px; background: linear-gradient(135deg, #ff6b4a, #ffa726); color: #fff; border: none; border-radius: 24px; font-size: 15px; font-weight: 600; }
+    .modal { display: none; position: fixed; inset: 0; z-index: 200; align-items: flex-end; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-mask { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .modal-content { position: relative; background: #fff; border-radius: 24px 24px 0 0; padding: 24px; width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; }
+    .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 13px; color: #6b5c4d; margin-bottom: 8px; display: block; }
+    .form-input { width: 100%; padding: 14px; border: 2px solid #f0e6dc; border-radius: 12px; font-size: 15px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    .form-summary { background: #faf8f6; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; line-height: 2; }
+    .form-summary .total { font-size: 18px; font-weight: bold; color: #ff6b4a; border-top: 1px dashed #f0e6dc; margin-top: 8px; padding-top: 8px; }
+    .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #ff6b4a, #ffa726); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; }
+    .submit-btn:disabled { background: #ccc; }
+    .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #2d2016; color: #fff; padding: 14px 28px; border-radius: 12px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
+    .toast.show { opacity: 1; }
+    .safe { height: 80px; }
+    .order-card { background: #fff; border-radius: 16px; padding: 16px; margin: 0 16px 12px; box-shadow: 0 2px 12px rgba(255,107,74,0.08); }
+    .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px dashed #f0e6dc; }
+    .order-id { font-size: 12px; color: #a89888; }
+    .order-status { padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; }
+    .order-status.pending { background: #fff7e6; color: #faad14; }
+    .order-status.cooking { background: #e6f7ff; color: #1890ff; }
+    .order-status.done { background: #f6ffed; color: #52c41a; }
+    .order-item-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+    .order-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 2px dashed #f0e6dc; margin-top: 12px; }
+    .order-time { font-size: 11px; color: #a89888; }
+    .order-price { font-size: 18px; font-weight: bold; color: #ff6b4a; }
+    .tabs { display: flex; gap: 8px; padding: 16px 16px 0; }
+    .tab { flex: 1; padding: 12px; text-align: center; background: #fff; border-radius: 12px; font-size: 14px; font-weight: 500; border: 2px solid #f0e6dc; cursor: pointer; }
+    .tab.active { background: linear-gradient(135deg, #ff6b4a, #ffa726); color: #fff; border-color: transparent; }
+    .admin-header { background: linear-gradient(135deg, #2d2016, #4a3728); border-radius: 20px; padding: 24px; color: #fff; margin: 16px; }
+    .admin-title { font-size: 20px; font-weight: bold; }
+    .admin-subtitle { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+    .admin-badge { background: linear-gradient(135deg, #ff6b4a, #ffa726); padding: 6px 14px; border-radius: 16px; font-size: 12px; font-weight: 600; display: inline-block; margin-top: 10px; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 16px; margin-bottom: 16px; }
+    .stat-card { background: #fff; border-radius: 16px; padding: 16px; }
+    .stat-icon { font-size: 28px; margin-bottom: 8px; }
+    .stat-value { font-size: 24px; font-weight: bold; }
+    .stat-label { font-size: 12px; color: #a89888; margin-top: 4px; }
+    .admin-card { background: #fff; border-radius: 16px; padding: 16px; margin: 0 16px 16px; }
+    .admin-title2 { font-size: 16px; font-weight: bold; margin-bottom: 14px; }
+    .order-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f0e6dc; }
+    .order-item:last-child { border-bottom: none; }
+    .order-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .order-info p { font-size: 12px; color: #a89888; }
+    .action-btn { padding: 8px 14px; border-radius: 10px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; }
+    .action-btn.primary { background: linear-gradient(135deg, #ff6b4a, #ffa726); color: #fff; }
+    .action-btn.success { background: #52c41a; color: #fff; }
+    .share-section { text-align: center; padding: 20px 16px; }
+    .share-title { font-size: 16px; font-weight: bold; margin-bottom: 16px; }
+    .share-qr { display: inline-block; padding: 16px; background: #fff; border-radius: 16px; border: 3px solid #f0e6dc; margin-bottom: 16px; }
+    .share-link { display: flex; gap: 8px; margin-top: 14px; }
+    .share-link input { flex: 1; padding: 12px; border: 2px solid #f0e6dc; border-radius: 10px; font-size: 12px; }
+    .share-link button { padding: 12px 16px; background: linear-gradient(135deg, #ff6b4a, #ffa726); color: #fff; border: none; border-radius: 10px; font-size: 13px; }
+    .empty { text-align: center; padding: 40px 20px; color: #a89888; }
+    .empty .emoji { font-size: 48px; margin-bottom: 10px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"></div>
+
+  <!-- 用户端 -->
+  <div id="userPanel">
+    <div class="tabs">
+      <div class="tab active" onclick="switchUserTab('menu', this)">🍢 点餐</div>
+      <div class="tab" onclick="switchUserTab('orders', this)">📋 我的订单</div>
+    </div>
+
+    <div id="menuView">
+      <div class="header">
+        <h1>🍢 萌萌辣关东煮</h1>
+        <p>现煮现捞 · 新鲜食材 · 满10元起送</p>
+      </div>
+
+      <div class="notice">
+        📣 <b>订餐通知</b><br>
+        ✅ 满<span class="hl">10元</span>起送<br>
+        ✅ 配送费<span class="hl">+2元</span>，餐盒免费<br>
+        ✅ 分装打包盒<span class="hl">1元/个</span><br>
+        ✅ 汤底免费，现煮现捞
+      </div>
+
+      <div class="spice">
+        <div class="spice-item active" onclick="selectSpice(this, '微辣')">
+          <div class="icon">🌶️</div><div class="name">微辣</div>
+        </div>
+        <div class="spice-item" onclick="selectSpice(this, '中辣')">
+          <div class="icon">🌶️🌶️</div><div class="name">中辣</div>
+        </div>
+        <div class="spice-item" onclick="selectSpice(this, '特辣')">
+          <div class="icon">🌶️🌶️🌶️</div><div class="name">特辣</div>
+        </div>
+        <div class="spice-item" onclick="selectSpice(this, '爆辣')">
+          <div class="icon">🔥</div><div class="name">爆辣</div>
+        </div>
+      </div>
+
+      <div class="recommend">
+        <div class="recommend-title">⭐ 必点推荐</div>
+        <div class="recommend-item">
+          <div class="recommend-info">
+            <span class="recommend-emoji">🍜</span>
+            <div>
+              <div class="recommend-name">天水手擀粉</div>
+              <div class="recommend-desc">Q弹爽滑，必点主食</div>
+            </div>
+          </div>
+          <div class="recommend-price"><span class="price-tag">¥2</span></div>
+        </div>
+        <div class="recommend-item">
+          <div class="recommend-info">
+            <span class="recommend-emoji">🍝</span>
+            <div>
+              <div class="recommend-name">定西宽粉</div>
+              <div class="recommend-desc">软糯入味，超满足</div>
+            </div>
+          </div>
+          <div class="recommend-price"><span class="price-tag">¥3</span><span class="price-tag">¥4</span></div>
+        </div>
+      </div>
+
+      <div class="category">
+        <div class="category-item active" onclick="filterMenu('all', this)">全部</div>
+        <div class="category-item" onclick="filterMenu('素菜类', this)">素菜 1元</div>
+        <div class="category-item" onclick="filterMenu('经典荤食', this)">荤食 2元</div>
+        <div class="category-item" onclick="filterMenu('特色爆款', this)">爆款 3元</div>
+      </div>
+
+      <div class="menu" id="menuGrid"></div>
+      <div class="safe"></div>
+    </div>
+
+    <div id="ordersView" style="display: none;"></div>
+  </div>
+
+  <!-- 管理端 -->
+  <div id="adminPanel" style="display: none;">
+    <div class="tabs">
+      <div class="tab active" onclick="switchAdminTab('dashboard', this)">📊 概览</div>
+      <div class="tab" onclick="switchAdminTab('orders', this)">📋 订单</div>
+      <div class="tab" onclick="switchAdminTab('share', this)">📱 分享</div>
+    </div>
+
+    <div id="dashboardView">
+      <div class="admin-header">
+        <div class="admin-title">萌萌辣关东煮</div>
+        <div class="admin-subtitle">管理后台 · 数据概览</div>
+        <div class="admin-badge">🔥 营业中</div>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="statOrders">0</div><div class="stat-label">今日订单</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="statRevenue">¥0</div><div class="stat-label">今日收入</div></div>
+        <div class="stat-card"><div class="stat-icon">🍢</div><div class="stat-value" id="statDishes">0</div><div class="stat-label">在售菜品</div></div>
+        <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-value" id="statPending">0</div><div class="stat-label">待处理</div></div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-title2">🔥 待处理订单</div>
+        <div id="pendingOrders"></div>
+      </div>
+    </div>
+
+    <div id="adminOrdersView" style="display: none;">
+      <div class="admin-card">
+        <div class="admin-title2">📋 全部订单</div>
+        <div id="allOrders"></div>
+      </div>
+    </div>
+
+    <div id="shareView" style="display: none;">
+      <div class="admin-card share-section">
+        <div class="share-title">📱 分享给顾客</div>
+        <div class="share-qr" id="shareQR"></div>
+        <p style="font-size: 13px; color: #a89888; margin-bottom: 14px;">扫描二维码即可进入点餐</p>
+        <div class="share-link">
+          <input type="text" id="shareLink" readonly>
+          <button onclick="copyLink()">复制</button>
+        </div>
+        <button class="submit-btn" style="margin-top: 16px;" onclick="downloadQR()">📥 下载二维码</button>
+      </div>
+    </div>
+
+    <!-- 切换到用户端 -->
+    <div style="padding: 16px;">
+      <button class="submit-btn" onclick="switchToUser()">📱 切换到用户端</button>
+    </div>
+  </div>
+
+  <!-- 切换到管理端按钮 -->
+  <div style="position: fixed; bottom: 80px; right: 20px; z-index: 50;">
+    <button onclick="switchToAdmin()" style="background: #2d2016; color: #fff; border: none; padding: 10px 16px; border-radius: 20px; font-size: 12px;">👨‍🍳 管理</button>
+  </div>
+
+  <!-- 订单弹窗 -->
+  <div class="modal" id="orderModal">
+    <div class="modal-mask" onclick="hideModal()"></div>
+    <div class="modal-content">
+      <div class="modal-title">📝 配送信息</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">楼号 *</label><input class="form-input" id="building" placeholder="如: 3"></div>
+        <div class="form-group"><label class="form-label">宿舍号 *</label><input class="form-input" id="room" placeholder="如: 412"></div>
+      </div>
+      <div class="form-group"><label class="form-label">姓氏 *</label><input class="form-input" id="name" placeholder="如: 王"></div>
+      <div class="form-group"><label class="form-label">手机号 *</label><input class="form-input" id="phone" type="tel" placeholder="如: 13888888888"></div>
+      <div class="form-group">
+        <label class="form-label">打包盒（如需分装）</label>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <button class="qty-btn minus" onclick="updateBox(-1)">−</button>
+          <span id="boxCount" style="font-weight: bold;">0</span>
+          <button class="qty-btn plus" onclick="updateBox(1)">+</button>
+          <span style="font-size: 12px; color: #a89888;">1元/个</span>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="note" placeholder="如: 多加汤、不要香菜..."></div>
+      <div class="form-summary" id="summary"></div>
+      <button class="submit-btn" id="submitBtn" onclick="submitOrder()">确认下单</button>
+    </div>
+  </div>
+
+  <!-- 购物车 -->
+  <div class="cart" id="cartBar" style="display: none;">
+    <div class="cart-info">
+      <span class="cart-icon">🛒</span>
+      <div>
+        <div class="cart-total" id="cartTotal">0</div>
+        <div class="cart-count" id="cartCount">0串</div>
+      </div>
+    </div>
+    <button class="cart-btn" onclick="showModal()">去结算 →</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    const menuData = [
+      { id: 1, name: '香菇', emoji: '🍄', price: 1, cat: '素菜类' },
+      { id: 2, name: '鞭炮笋', emoji: '🌿', price: 1, cat: '素菜类' },
+      { id: 3, name: '面筋', emoji: '🧽', price: 1, cat: '素菜类' },
+      { id: 4, name: '蘑菇', emoji: '🍄', price: 1, cat: '素菜类' },
+      { id: 5, name: '西兰花', emoji: '🥦', price: 1, cat: '素菜类' },
+      { id: 6, name: '香菜', emoji: '🌿', price: 1, cat: '素菜类' },
+      { id: 7, name: '木耳', emoji: '🖤', price: 1, cat: '素菜类' },
+      { id: 8, name: '金针菇', emoji: '🥬', price: 1, cat: '素菜类' },
+      { id: 9, name: '豆腐', emoji: '🧈', price: 1, cat: '素菜类' },
+      { id: 10, name: '生菜', emoji: '🥬', price: 1, cat: '素菜类' },
+      { id: 11, name: '西葫芦', emoji: '🥒', price: 1, cat: '素菜类' },
+      { id: 12, name: '豆皮', emoji: '🫓', price: 1, cat: '素菜类' },
+      { id: 13, name: '娃娃菜', emoji: '🥬', price: 1, cat: '素菜类' },
+      { id: 14, name: '年糕', emoji: '🍚', price: 1, cat: '素菜类' },
+      { id: 15, name: '海带', emoji: '🌿', price: 1, cat: '素菜类' },
+      { id: 16, name: '莲藕', emoji: '🪷', price: 1, cat: '素菜类' },
+      { id: 17, name: '白萝卜', emoji: '🥕', price: 1, cat: '素菜类' },
+      { id: 18, name: '土豆片', emoji: '🥔', price: 1, cat: '素菜类' },
+      { id: 19, name: '鸭血', emoji: '🩸', price: 1, cat: '素菜类' },
+      { id: 20, name: '面藕', emoji: '🍜', price: 1, cat: '素菜类' },
+      { id: 21, name: '素豆肠', emoji: '🌭', price: 1, cat: '素菜类' },
+      { id: 22, name: '贡菜', emoji: '🥬', price: 1, cat: '素菜类' },
+      { id: 23, name: '茼蒿', emoji: '🌿', price: 1, cat: '素菜类' },
+      { id: 24, name: '洋芋丸子', emoji: '🧆', price: 2, cat: '经典荤食' },
+      { id: 25, name: '鹌鹑蛋', emoji: '🥚', price: 2, cat: '经典荤食' },
+      { id: 26, name: '火锅面', emoji: '🍜', price: 2, cat: '经典荤食' },
+      { id: 27, name: '鸡肉肠', emoji: '🌭', price: 2, cat: '经典荤食' },
+      { id: 28, name: '兰花串', emoji: '🍢', price: 2, cat: '经典荤食' },
+      { id: 29, name: '鱼豆腐', emoji: '🧈', price: 2, cat: '经典荤食' },
+      { id: 30, name: '蟹棒', emoji: '🦀', price: 2, cat: '经典荤食' },
+      { id: 31, name: '油条', emoji: '🥖', price: 2, cat: '经典荤食' },
+      { id: 32, name: '鱼排', emoji: '🐟', price: 2, cat: '经典荤食' },
+      { id: 33, name: '蟹排', emoji: '🦀', price: 2, cat: '经典荤食' },
+      { id: 34, name: '小辣肠', emoji: '🌶️', price: 2, cat: '经典荤食' },
+      { id: 35, name: '广式烤肠', emoji: '🌭', price: 2, cat: '经典荤食' },
+      { id: 36, name: '鱼卷', emoji: '🍥', price: 2, cat: '经典荤食' },
+      { id: 37, name: '响铃卷', emoji: '🔔', price: 2, cat: '经典荤食' },
+      { id: 38, name: '撒尿牛丸', emoji: '🥩', price: 3, cat: '特色爆款' },
+      { id: 39, name: '福袋', emoji: '🧧', price: 3, cat: '特色爆款' },
+      { id: 40, name: '虾球', emoji: '🦐', price: 3, cat: '特色爆款' },
+      { id: 41, name: '蛋卷', emoji: '🥚', price: 3, cat: '特色爆款' },
+      { id: 42, name: '天水手擀粉', emoji: '🍜', price: 2, cat: '特色爆款' },
+      { id: 43, name: '定西宽粉', emoji: '🍝', price: 3, cat: '特色爆款' },
+    ];
+
+    let cart = {}, spice = '微辣', boxCount = 0;
+    let orders = JSON.parse(localStorage.getItem('mo_orders') || '[]');
+    const DELIVERY = 2, MIN = 10, BOX = 1;
+
+    renderMenu('all');
+
+    function selectSpice(el, s) {
+      document.querySelectorAll('.spice-item').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      spice = s;
+    }
+
+    function filterMenu(cat, el) {
+      document.querySelectorAll('.category-item').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      renderMenu(cat);
+    }
+
+    function renderMenu(cat) {
+      const items = cat === 'all' ? menuData : menuData.filter(m => m.cat === cat);
+      document.getElementById('menuGrid').innerHTML = items.map(m => `
+        <div class="menu-item">
+          <div class="menu-emoji">${m.emoji}</div>
+          <div class="menu-name">${m.name}</div>
+          <div class="menu-price">${m.price}</div>
+          <div class="qty">
+            <button class="qty-btn minus" onclick="updateCart(${m.id}, -1)">−</button>
+            <span class="qty-num" id="q${m.id}">${cart[m.id] || 0}</span>
+            <button class="qty-btn plus" onclick="updateCart(${m.id}, 1)">+</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateCart(id, d) {
+      cart[id] = Math.max(0, (cart[id] || 0) + d);
+      if (!cart[id]) delete cart[id];
+      document.getElementById('q' + id).textContent = cart[id] || 0;
+      const total = Object.entries(cart).reduce((s, [id, q]) => s + menuData.find(x => x.id == id).price * q, 0);
+      const count = Object.values(cart).reduce((s, q) => s + q, 0);
+      document.getElementById('cartBar').style.display = count ? 'flex' : 'none';
+      document.getElementById('cartTotal').textContent = total;
+      document.getElementById('cartCount').textContent = count + '串';
+    }
+
+    function showModal() {
+      document.getElementById('orderModal').classList.add('show');
+      updateSummary();
+    }
+
+    function hideModal() {
+      document.getElementById('orderModal').classList.remove('show');
+    }
+
+    function updateBox(d) {
+      boxCount = Math.max(0, boxCount + d);
+      document.getElementById('boxCount').textContent = boxCount;
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const sub = Object.entries(cart).reduce((s, [id, q]) => s + menuData.find(x => x.id == id).price * q, 0);
+      const boxFee = boxCount * BOX;
+      const total = sub + DELIVERY + boxFee;
+      const can = sub >= MIN;
+      let html = `<div>商品小计：¥${sub}</div><div>配送费：¥${DELIVERY}</div>`;
+      if (boxCount) html += `<div>打包盒：${boxCount}个 × ¥${BOX} = ¥${boxFee}</div>`;
+      html += `<div>辣度：${spice}</div>`;
+      html += `<div class="total">合计：¥${total}</div>`;
+      if (!can) html += `<div style="color:#ff4757;margin-top:8px;font-size:12px;">⚠️ 还差¥${MIN-sub}起送</div>`;
+      document.getElementById('summary').innerHTML = html;
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = !can;
+      btn.textContent = can ? `确认下单 ¥${total}` : `满${MIN}元起送`;
+    }
+
+    function submitOrder() {
+      const b = document.getElementById('building').value.trim();
+      const r = document.getElementById('room').value.trim();
+      const n = document.getElementById('name').value.trim();
+      const p = document.getElementById('phone').value.trim();
+      const note = document.getElementById('note').value.trim();
+      if (!b || !r || !n) { toast('请填写完整信息'); return; }
+      if (!p || !/^1[3-9]\d{9}$/.test(p)) { toast('请输入正确手机号'); return; }
+      const items = Object.entries(cart).map(([id, q]) => {
+        const m = menuData.find(x => x.id == id);
+        return { name: m.name, price: m.price, qty: q, emoji: m.emoji };
+      });
+      const sub = items.reduce((s, i) => s + i.price * i.qty, 0);
+      const boxFee = boxCount * BOX;
+      const order = {
+        id: Date.now().toString().slice(-6),
+        building: b, room: r, name: n, phone: p, spice, note,
+        items, subtotal: sub, boxCount, boxFee, deliveryFee: DELIVERY,
+        total: sub + DELIVERY + boxFee,
+        status: 'pending',
+        time: new Date().toLocaleString('zh-CN')
+      };
+      orders.unshift(order);
+      localStorage.setItem('mo_orders', JSON.stringify(orders));
+      cart = {}; boxCount = 0;
+      document.getElementById('boxCount').textContent = '0';
+      hideModal();
+      document.getElementById('cartBar').style.display = 'none';
+      ['building', 'room', 'name', 'phone', 'note'].forEach(id => document.getElementById(id).value = '');
+      renderMenu('all');
+      toast('下单成功！订单号：' + order.id);
+    }
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function switchUserTab(tab, el) {
+      document.querySelectorAll('#userPanel .tab').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('menuView').style.display = tab === 'menu' ? 'block' : 'none';
+      document.getElementById('ordersView').style.display = tab === 'orders' ? 'block' : 'none';
+      if (tab === 'orders') renderOrders();
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('ordersView');
+      if (!orders.length) {
+        container.innerHTML = '<div class="empty"><span class="emoji">🍢</span><p>还没有订单哦~</p></div>';
+        return;
+      }
+      container.innerHTML = '<div style="padding: 16px 0;">' + orders.slice(0, 20).map(o => `
+        <div class="order-card">
+          <div class="order-header">
+            <span class="order-id">订单号: ${o.id}</span>
+            <span class="order-status ${o.status}">${{pending:'⏳ 待接单',cooking:'🍳 制作中',done:'✅ 已完成'}[o.status]}</span>
+          </div>
+          ${o.items.map(i => `<div class="order-item-row"><span>${i.emoji} ${i.name}</span><span>x${i.qty}</span></div>`).join('')}
+          <div style="font-size:11px;color:#a89888;margin:8px 0;">🌶️ ${o.spice} · 📍 ${o.building}号楼 ${o.room} ${o.name}</div>
+          <div class="order-footer"><span class="order-time">${o.time}</span><span class="order-price">¥${o.total}</span></div>
+        </div>
+      `).join('') + '</div>';
+    }
+
+    function switchToAdmin() {
+      document.getElementById('userPanel').style.display = 'none';
+      document.getElementById('adminPanel').style.display = 'block';
+      renderDashboard();
+    }
+
+    function switchToUser() {
+      document.getElementById('adminPanel').style.display = 'none';
+      document.getElementById('userPanel').style.display = 'block';
+    }
+
+    function switchAdminTab(tab, el) {
+      document.querySelectorAll('#adminPanel .tab').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('dashboardView').style.display = tab === 'dashboard' ? 'block' : 'none';
+      document.getElementById('adminOrdersView').style.display = tab === 'orders' ? 'block' : 'none';
+      document.getElementById('shareView').style.display = tab === 'share' ? 'block' : 'none';
+      if (tab === 'dashboard') renderDashboard();
+      if (tab === 'orders') renderAllOrders();
+      if (tab === 'share') renderShareQR();
+    }
+
+    function renderDashboard() {
+      const today = new Date().toDateString();
+      const todayOrders = orders.filter(o => new Date().time).toDateString() === today);
+      document.getElementById('statOrders').textContent = todayOrders.length;
+      document.getElementById('statRevenue').textContent = '¥' + todayOrders.reduce((s, o) => s + o.total, 0);
+      document.getElementById('statDishes').textContent = menuData.length;
+      document.getElementById('statPending').textContent = orders.filter(o => o.status === 'pending').length;
+
+      const pending = orders.filter(o => o.status !== 'done').slice(0, 10);
+      const container = document.getElementById('pendingOrders');
+      if (!pending.length) {
+        container.innerHTML = '<div class="empty"><span class="emoji">✅</span><p>暂无待处理订单</p></div>';
+        return;
+      }
+      container.innerHTML = pending.map(o => `
+        <div class="order-item">
+          <div class="order-info">
+            <h4>${o.building}号楼 ${o.room} ${o.name} [${o.spice}]</h4>
+            <p>${o.items.map(i => i.name+'x'+i.qty).join('、')}</p>
+            <p>¥${o.subtotal}+配送¥${o.deliveryFee}${o.boxCount?' + 盒¥'+o.boxFee:''} = <b>¥${o.total}</b></p>
+            <p style="font-size:11px;">${o.time}</p>
+          </div>
+          <div style="display:flex;gap:6px;">
+            ${o.status==='pending'?`<button class="action-btn primary" onclick="updateStatus('${o.id}','cooking')">接单</button>`:''}
+            ${o.status==='cooking'?`<button class="action-btn success" onclick="updateStatus('${o.id}','done')">完成</button>`:''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAllOrders() {
+      const container = document.getElementById('allOrders');
+      if (!orders.length) {
+        container.innerHTML = '<div class="empty"><span class="emoji">📭</span><p>暂无订单</p></div>';
+        return;
+      }
+      container.innerHTML = orders.map(o => `
+        <div class="order-item">
+          <div class="order-info">
+            <h4>${o.building}号楼 ${o.room} ${o.name} <span class="order-status ${o.status}" style="margin-left:6px;padding:3px 8px;border-radius:10px;font-size:10px;">${{pending:'⏳ 待接单',cooking:'🍳 制作中',done:'✅ 已完成'}[o.status]}</span></h4>
+            <p>${o.items.map(i => i.name+'x'+i.qty).join('、')}</p>
+            <p style="font-size:10px;">🌶️ ${o.spice} · ¥${o.total} · ${o.time}</p>
+          </div>
+          <div style="display:flex;gap:6px;">
+            ${o.status==='pending'?`<button class="action-btn primary" onclick="updateStatus('${o.id}','cooking')">接单</button>`:''}
+            ${o.status==='cooking'?`<button class="action-btn success" onclick="updateStatus('${o.id}','done')">完成</button>`:''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateStatus(id, status) {
+      const order = orders.find(o => o.id === id);
+      if (order) {
+        order.status = status;
+        localStorage.setItem('mo_orders', JSON.stringify(orders));
+        renderDashboard();
+        renderAllOrders();
+        toast('订单 ' + id + ' 已更新');
+      }
+    }
+
+    function renderShareQR() {
+      const url = window.location.href;
+      document.getElementById('shareLink').value = url;
+      const container = document.getElementById('shareQR');
+      container.innerHTML = '';
+      new QRCode(container, { text: url, width: 180, height: 180 });
+    }
+
+    function copyLink() {
+      const input = document.getElementById('shareLink');
+      input.select();
+      document.execCommand('copy');
+      toast('链接已复制 ✅');
+    }
+
+    function downloadQR() {
+      const canvas = document.querySelector('#shareQR canvas');
+      if (canvas) {
+        const link = document.createElement('a');
+        link.download = '萌萌辣关东煮-二维码.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        toast('已下载 📥');
+      }
+    }
+  </script>
+</body>
+</html>
